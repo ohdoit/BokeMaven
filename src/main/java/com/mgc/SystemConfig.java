@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import com.mgc.entity.system.SystemUser;
 
 /**
- * 将JavaConfig拆分
+ * 将JavaConfig拆分, git
  */
 @Configuration
 public class SystemConfig {
