@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"  
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+    xmlns:context="http://www.springframework.org/schema/context"  
+    xmlns:mvc="http://www.springframework.org/schema/mvc"  
+    xmlns:tx="http://www.springframework.org/schema/tx"  
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd  
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd  
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd  
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd 
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd" > 
+	<!-- <import resource="datasource.xml"/> -->
+   <!-- 引入db.properties文件 -->
+   <context:property-placeholder location="classpath:db.properties" />  
+   <!-- <bean id="propertyConfigurer"  
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">  
+        <property name="location" value="classpath:db.properties" />  
+    </bean> -->
+    
+   <!-- 配置数据源c3p0 -->
+   <!-- 配置文件中的jdbc.username，如果写成username，可能会与系统环境中的username变量冲突，所以到时候真正连接数据库的时候，用户名就被替换成系统中的用户名（有得可能是administrator） -->
+   <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+   		<property name="user" value="${user}"></property>
+   		<property name="password" value="${password}"></property>
+   		<property name="jdbcUrl" value="${jdbcUrl}"></property>
+   		<property name="driverClass" value="${driverClass}"></property>
+   		
+   		<!-- c3p0连接池的私有属性
+   		初始化线程池大小 -->
+   		<property name="initialPoolSize" value="${initialPoolSize}"></property>
+   		<!-- 初始化线程池线程最大数 -->
+   		<property name="maxPoolSize" value="${maxPoolSize}"></property>       
+   		<property name="minPoolSize" value="${minPoolSize}"></property>  
+   		<!-- 关闭连接后不自动commit    -->
+   		<property name="autoCommitOnClose" value="${autoCommitOnClose}"></property>
+   		<!-- 获取连接超时时间 -->
+   		<property name="checkoutTimeout" value="${checkoutTimeout}"></property>
+   		<!-- 获取连接失败重试次数 -->
+   		<property name="acquireRetryAttempts" value="${acquireRetryAttempts}"></property>
+   </bean>
+   <!-- <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+	    <property name="driverClass" value="${driverClass}" />
+	    <property name="url" value="${jdbcUrl}" />
+	    <property name="username" value="${user}" />
+	    <property name="password" value="${password}" />
+   </bean> -->
+   
+   <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+   		<!-- 引入数据源 -->
+   		<property name="dataSource" ref="dataSource"></property>
+   		<!-- 加载MyBatis配置文件 -->
+   		<property name="configLocation" value="classpath:mybatisConfig.xml"></property>
+   		<!-- 扫描entity包，使用别名 -->
+   		<!-- <property name="typeAliasesPackage" value="com.mgc.entity"></property> -->
+   		<!-- 加载Mybatis映射文件 -->
+   		<property name="mapperLocations" value="classpath*:com/mgc/mapper/**/*.xml"></property>
+   </bean>
+   
+   <!-- 配置Dao接口的两种方法：1.单个MapperFactoryBean. 2.包里面的MapperScannerConfigurer -->
+   <!-- <bean id="SystemUserDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
+   		<property name="sqlSessionFactory" ref="sqlSessionFactory"></property>
+   		<property name="mapperInterface" value="com.mgc.dao.system.SystemUserDao"></property>
+   </bean> -->
+   <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+   		<!-- 注入sqlSessionFactory -->
+   		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+   		<property name="basePackage" value="com.mgc.dao"></property>
+   </bean>
+   
+   <!-- 自动扫描service包下所有使用注解@Service的类型，把事务管理交由spring完成，可以直接在方法上@Transaction -->
+   <context:component-scan base-package="com.mgc.service,com.mgc.aop"></context:component-scan>
+   <mvc:annotation-driven>
+        <!-- 消息转换器，配置字符集解决乱码问题 -->
+        <mvc:message-converters register-defaults="true">
+            <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                <property name="supportedMediaTypes" value="text/html;charset=UTF-8" />
+            </bean>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+    
+   <!-- 配置事务管理器 -->
+   <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+   		<!-- 注入数据源 -->
+   		<property name="dataSource" ref="dataSource"></property>
+   </bean>
+   <!-- 配置基于注解的声明式事务 -->
+   <tx:annotation-driven transaction-manager="transactionManager"/>
+   
+   <!-- activiti流程需要的bean -->
+   <bean id="processEngineConfiguration" class="org.activiti.spring.SpringProcessEngineConfiguration">
+   		<property name="dataSource" ref="dataSource" />
+	    <property name="transactionManager" ref="transactionManager" />
+	    <property name="databaseSchemaUpdate" value="true" />
+	    <property name="asyncExecutorActivate" value="false" />
+   </bean>
+   <bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
+   		<property name="processEngineConfiguration" ref="processEngineConfiguration"/>
+   </bean>
+   <bean id="repositoryService" factory-bean="processEngine" factory-method="getRepositoryService" />
+   <bean id="runtimeService" factory-bean="processEngine" factory-method="getRuntimeService" />
+   <bean id="taskService" factory-bean="processEngine" factory-method="getTaskService" />
+   <bean id="hisotryService" factory-bean="processEngine" factory-method="getHistoryService" />
+   <bean id="managementService" factory-bean="processEngine" factory-method="getManagementService" />
+   
+   <!-- aop -->
+   <aop:aspectj-autoproxy />
+   
+   
+	
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+	     <property name="maxUploadSize" value="104857600" />
+	     <property name="maxInMemorySize" value="4096" />
+	     <property name="defaultEncoding" value="UTF-8"></property>
+	</bean>
+</beans>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- For assistance related to logback-translator or configuration  -->
+<!-- files in general, please contact the logback user mailing list -->
+<!-- at http://www.qos.ch/mailman/listinfo/logback-user             -->
+<!--                                                                -->
+<!-- For professional support please see                            -->
+<!--    http://www.qos.ch/shop/products/professionalSupport         -->
+<!--                                                                -->
+
+<!-- debug=true，表示输出logback的内部状态信息，
+	scan=true,表示扫描配置文件，重新配置文件中修改的地方，
+	scanPeriod单位： milliseconds, seconds, minutes or hours -->
+<configuration debug="false" scan="true" scanPeriod="5 minutes">
+	<!-- 设置状态监听器，等价于debug=true -->
+	<!-- <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" /> -->
+	<!-- 设置上下文名称，用于多个应用时区分日志 -->
+ 	<contextName>logback</contextName>
+ 	<!-- 时间戳 ${"logfileTime"} -->
+ 	<timestamp key="logfileTime" datePattern="yyyyMMdd" />
+	<property name="LOG_HOME" value="logs" />
+	<property name="ENCODER_PATTERN" value="[%p]%d{yyyy-MM-dd HH:mm}[%c] %m%n" scope="local"/>
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<!--  if this property is set to true, then you should put "org.fusesource.jansi:jansi:1.9" on the class path.  -->
+		<!-- 或者使用Eclipse插件 Under the Eclipse IDE 
+			To install the plugins in Eclipse select “Help” -> “Install New Software…” and click “Add…” to add the following URL:
+			http://www.mihai-nita.net/eclipse   -->
+		<!-- <withJansi>true</withJansi> -->
+		<encoder>
+			<pattern>%contextName %highlight(%-5level) %green(%d{MM-dd HH:mm}) [%logger{35}] %msg %n</pattern>
+			<!-- <pattern>%contextName %-5level %d{MM-dd HH:mm} [%logger{35}] %msg %n</pattern> -->
+			<charset class="java.nio.charset.Charset">utf-8</charset>  
+		</encoder>
+	</appender>
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<Append>true</Append>
+		 <!-- Support multiple-JVM writing to the same log file, append is true -->
+    	<!-- <prudent>true</prudent> -->		
+		<file>logs/logback.log</file>
+		<encoder>
+			<pattern>${ENCODER_PATTERN}</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy" >
+			<fileNamePattern>${LOG_HOME}/logback.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- 日志总大小 -->
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
+		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+      		<MaxFileSize>10MB</MaxFileSize>
+    	</triggeringPolicy>
+  	</appender>
+  	<!-- 错误日志 -->
+  	<appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+  		<file>${LOG_HOME}/error.log</file>
+  		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+  			<pattern>${ENCODER_PATTERN}</pattern>
+  		</encoder>
+  		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+  			<!-- rollover daily %d和%i是必须的 -->
+  			<fileNamePattern>${LOG_HOME}/error-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+  			<!-- each file should be at most 100MB, keep 60 days worth of history, but at most 20GB -->
+       		<maxFileSize>100MB</maxFileSize>    
+       		<maxHistory>60</maxHistory>
+       		<totalSizeCap>10GB</totalSizeCap>
+  		</rollingPolicy>
+  		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+	     	<maxFileSize>8MB</maxFileSize>
+	    </triggeringPolicy>
+  		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+  			<level>WARN</level>
+  		</filter>
+  	</appender>
+  	
+  	<!-- 根日志记录器，是所有日志记录器的父级 -->
+  	<root level="DEBUG">
+    	<appender-ref ref="CONSOLE"/>
+    	<appender-ref ref="FILE"/>
+    	<appender-ref ref="ERROR_FILE"/>
+  	</root>
+  		
+  	<!-- 设置日志级别，name为包名或类名 -->
+  	<logger name="com.mgc.system.TestSpringMybatis" level="INFO" additivity="false">
+  		<!-- appender是累加的，该日志记录器将在控制台重复输出，但是additivity设置为false将不会重复输出 -->
+  		<appender-ref ref="CONSOLE"/>
+  	</logger>
+  	
+</configuration>
